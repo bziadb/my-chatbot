@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chatbot Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0B0E14; --surface: #10141C; --surface2: #1A1F2E;
+      --border: #1E2536; --text: #E2E8F0; --text2: #94A3B8;
+      --muted: #64748B; --accent: #0F6FFF; --danger: #EF4444;
+      --success: #10B981;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text);
+      min-height: 100vh;
+    }
+    /* ── Login Screen ── */
+    #login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
+    }
+    .login-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 40px; width: 380px; max-width: 100%;
+    }
+    .login-box h1 { font-size: 22px; margin-bottom: 6px; letter-spacing: -0.03em; }
+    .login-box p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    .login-box input {
+      width: 100%; padding: 11px 14px; border-radius: 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); font-size: 14px; font-family: inherit;
+      outline: none; margin-bottom: 16px;
+    }
+    .login-box input:focus { border-color: var(--accent); }
+    .login-error { color: var(--danger); font-size: 13px; margin-bottom: 12px; display: none; }
+    /* ── Layout ── */
+    #app { display: none; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 56px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+    .topbar-brand .dot { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent)); display:flex;align-items:center;justify-content:center; }
+    .topbar-nav { display: flex; gap: 2px; background: var(--surface2); border-radius: 10px; padding: 3px; }
+    .topbar-nav button {
+      padding: 7px 14px; border-radius: 8px; border: none; cursor: pointer;
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      background: transparent; color: var(--muted); transition: all 0.2s;
+    }
+    .topbar-nav button.active { background: #252C3D; color: #fff; }
+    .sidebar {
+      width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+      padding: 16px 10px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .sidebar button {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 8px; border: none; cursor: pointer;
+      font-size: 13.5px; font-weight: 500; font-family: inherit; text-align: left;
+      background: transparent; color: #8896AB;
+      border-left: 3px solid transparent; transition: all 0.2s;
+    }
+    .sidebar button.active { background: #1A2236; color: #fff; border-left-color: var(--accent); }
+    .main-area { flex: 1; overflow: auto; padding: 28px 36px; }
+    .content-layout { display: flex; flex: 1; overflow: hidden; }
+    /* ── Form Elements ── */
+    .field { margin-bottom: 24px; max-width: 520px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
+    .field input, .field textarea, .field select {
+      width: 100%; padding: 10px 14px; border-radius: 10px;
+      background: #111827; border: 1px solid var(--border);
+      color: var(--text); font-size: 14px; font-family: inherit; outline: none;
+    }
+    .field textarea { resize: vertical; line-height: 1.6; }
+    .field input:focus, .field textarea:focus { border-color: var(--accent); }
+    /* ── Upload Zone ── */
+    .upload-zone {
+      border: 2px dashed #2A3348; border-radius: 14px; padding: 40px 24px;
+      text-align: center; cursor: pointer; background: #0D1119;
+      transition: all 0.25s; margin-bottom: 28px;
+    }
+    .upload-zone.dragover { border-color: var(--accent); background: rgba(15,111,255,0.03); }
+    .upload-zone h3 { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+    .upload-zone p { color: var(--muted); font-size: 13px; }
+    /* ── Table ── */
+    .doc-table { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); overflow: hidden; }
+    .doc-table-header {
+      display: grid; grid-template-columns: 1fr 90px 140px 80px 50px;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      font-size: 11px; font-weight: 600; color: #4B5975; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .doc-row {
+      display: grid; grid-template-columns: 1fr 90px 140px 80px 50px;
+      padding: 14px 20px; align-items: center;
+      border-bottom: 1px solid #1A1F2E; transition: background 0.15s;
+    }
+    .doc-row:hover { background: #151A26; }
+    .doc-name { font-size: 13.5px; font-weight: 500; }
+    .doc-meta { font-size: 13px; color: var(--muted); }
+    .badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: rgba(15,111,255,0.1); color: #60A5FA; }
+    .btn-delete {
+      background: none; border: none; color: #4B5975; cursor: pointer; padding: 4px; border-radius: 6px;
+    }
+    .btn-delete:hover { color: var(--danger); }
+    /* ── Buttons ── */
+    .btn-primary {
+      padding: 11px 28px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, var(--accent), rgba(15,111,255,0.8));
+      color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+      box-shadow: 0 4px 14px rgba(15,111,255,0.2); transition: transform 0.15s;
+    }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-logout {
+      padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; font-family: inherit;
+    }
+    /* ── Progress ── */
+    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #60A5FA); border-radius: 2px; transition: width 0.2s; }
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--surface2); border: 1px solid #2A3348;
+      border-radius: 12px; padding: 12px 20px; display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4); z-index: 100;
+      animation: fadeIn 0.25s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+    .empty-state { padding: 40px; text-align: center; color: #4B5975; font-size: 14px; }
+    h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.03em; }
+    .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    /* ── Colors ── */
+    .color-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+    .color-swatch {
+      width: 38px; height: 38px; border-radius: 10px; border: none;
+      cursor: pointer; position: relative; transition: all 0.2s;
+    }
+    .color-swatch.active { box-shadow: 0 0 0 3px currentColor; }
+  </style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>🤖 Chatbot Admin</h1>
+    <p>Enter your admin password to continue.</p>
+    <div class="login-error" id="login-error">Invalid password. Try again.</div>
+    <input type="password" id="login-password" placeholder="Admin password" autofocus />
+    <button class="btn-primary" style="width:100%" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="dot">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
+      </div>
+      <span id="brand-title">Aria <span style="color:#64748B;font-weight:400">Admin</span></span>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+  </div>
+
+  <div class="content-layout" style="height: calc(100vh - 56px);">
+    <div class="sidebar">
+      <button class="active" data-tab="knowledge" onclick="switchTab(this)">📄 Knowledge Base</button>
+      <button data-tab="appearance" onclick="switchTab(this)">🎨 Appearance</button>
+      <button data-tab="settings" onclick="switchTab(this)">⚙️ Bot Settings</button>
+      <button data-tab="embed" onclick="switchTab(this)">🔗 Embed Code</button>
+    </div>
+
+    <div class="main-area">
+
+      <!-- ── Knowledge Base ── -->
+      <div id="tab-knowledge" class="tab-panel">
+        <h2>Knowledge Base</h2>
+        <p class="subtitle">Upload documents to train your chatbot. Supported: PDF, DOCX, TXT, CSV, JSON, MD.</p>
+
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+          <h3>Drop files here or click to browse</h3>
+          <p>Up to 25MB per file</p>
+        </div>
+        <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt,.csv,.json,.md" style="display:none" />
+
+        <div id="upload-progress" style="display:none; margin-bottom:20px; padding:14px 18px; background:#111827; border-radius:12px; border:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span id="upload-name" style="font-size:13px;font-weight:500"></span>
+            <span id="upload-pct" style="font-size:12px;color:var(--accent)"></span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="upload-fill" style="width:0%"></div></div>
+        </div>
+
+        <div class="doc-table">
+          <div class="doc-table-header">
+            <span>Document</span><span>Size</span><span>Uploaded</span><span>Chunks</span><span></span>
+          </div>
+          <div id="doc-list"></div>
+        </div>
+      </div>
+
+      <!-- ── Appearance ── -->
+      <div id="tab-appearance" class="tab-panel" style="display:none">
+        <h2>Appearance</h2>
+        <p class="subtitle">Customize how your chatbot looks.</p>
+
+        <div class="field">
+          <label>Bot Name</label>
+          <input id="set-botName" />
+        </div>
+        <div class="field">
+          <label>Welcome Message</label>
+          <textarea id="set-welcomeMessage" rows="3"></textarea>
+        </div>
+        <div class="field">
+          <label>Primary Color</label>
+          <div class="color-grid" id="color-grid"></div>
+        </div>
+        <button class="btn-primary" onclick="saveSettings()">Save Appearance</button>
+      </div>
+
+      <!-- ── Settings ── -->
+      <div id="tab-settings" class="tab-panel" style="display:none">
+        <h2>Bot Settings</h2>
+        <p class="subtitle">Configure the AI model and behavior.</p>
+
+        <div class="field">
+          <label>Model</label>
+          <select id="set-model">
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
+            <option value="claude-opus-4-6">Claude Opus 4.6</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>System Prompt</label>
+          <textarea id="set-systemPrompt" rows="6"></textarea>
+        </div>
+        <div class="field">
+          <label>Temperature: <span id="temp-val">0.3</span></label>
+          <input type="range" id="set-temperature" min="0" max="1" step="0.1" style="accent-color:var(--accent)" />
+        </div>
+        <div class="field">
+          <label>Max Tokens</label>
+          <input type="number" id="set-maxTokens" />
+        </div>
+        <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+
+      <!-- ── Embed Code ── -->
+      <div id="tab-embed" class="tab-panel" style="display:none">
+        <h2>Embed on Your Website</h2>
+        <p class="subtitle">Copy this snippet into your WordPress site.</p>
+
+        <div style="background:#0D1119; border-radius:14px; border:1px solid var(--border); overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; padding:10px 18px; border-bottom:1px solid var(--border);">
+            <div style="display:flex;gap:7px">
+              <div style="width:11px;height:11px;border-radius:50%;background:#EF4444"></div>
+              <div style="width:11px;height:11px;border-radius:50%;background:#F59E0B"></div>
+              <div style="width:11px;height:11px;border-radius:50%;background:#10B981"></div>
+            </div>
+            <button onclick="copyEmbed()" style="padding:5px 12px;border-radius:6px;border:1px solid #2A3348;background:#1A2236;color:#94A3B8;font-size:12px;cursor:pointer;font-family:inherit">Copy Code</button>
+          </div>
+          <pre id="embed-code" style="padding:20px 22px;margin:0;overflow:auto;font-size:13px;line-height:1.7;color:#94A3B8;font-family:'JetBrains Mono',monospace"></pre>
+        </div>
+
+        <div style="margin-top:28px;padding:20px 24px;border-radius:14px;background:#111827;border:1px solid var(--border)">
+          <h3 style="font-size:15px;margin-bottom:12px">WordPress Installation</h3>
+          <ol style="color:var(--text2);font-size:13.5px;line-height:2;padding-left:20px">
+            <li>Go to <strong>Appearance → Theme Editor</strong> (or use a plugin like "Insert Headers and Footers")</li>
+            <li>Paste the embed code just before the closing <code style="background:#1A2236;padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace">&lt;/body&gt;</code> tag</li>
+            <li>Save changes — the chat bubble appears on every page</li>
+            <li>Or use a <strong>Custom HTML Block</strong> in any page/post for specific pages only</li>
+          </ol>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+  // ═══ CONFIG ═══
+  const API = window.location.origin;
+  let token = localStorage.getItem("cb_token") || "";
+  let settings = {};
+  let documents = [];
+
+  // ═══ AUTH ═══
+  function doLogin() {
+    const pw = document.getElementById("login-password").value;
+    fetch(`${API}/api/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pw })
+    }).then(r => r.json()).then(data => {
+      if (data.token) {
+        token = data.token;
+        localStorage.setItem("cb_token", token);
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        loadData();
+      } else {
+        document.getElementById("login-error").style.display = "block";
+      }
+    }).catch(() => {
+      document.getElementById("login-error").style.display = "block";
+    });
+  }
+
+  document.getElementById("login-password").addEventListener("keydown", e => {
+    if (e.key === "Enter") doLogin();
+  });
+
+  function doLogout() {
+    token = "";
+    localStorage.removeItem("cb_token");
+    document.getElementById("app").style.display = "none";
+    document.getElementById("login-screen").style.display = "flex";
+  }
+
+  // ═══ DATA ═══
+  async function loadData() {
+    await loadSettings();
+    await loadDocuments();
+  }
+
+  async function loadSettings() {
+    const res = await fetch(`${API}/api/admin/settings`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 401) return doLogout();
+    const data = await res.json();
+    settings = data.settings;
+    populateSettings();
+  }
+
+  async function loadDocuments() {
+    const res = await fetch(`${API}/api/admin/documents`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    documents = data.documents || [];
+    renderDocuments();
+  }
+
+  function populateSettings() {
+    document.getElementById("set-botName").value = settings.botName || "";
+    document.getElementById("set-welcomeMessage").value = settings.welcomeMessage || "";
+    document.getElementById("set-model").value = settings.model || "claude-sonnet-4-20250514";
+    document.getElementById("set-systemPrompt").value = settings.systemPrompt || "";
+    document.getElementById("set-temperature").value = settings.temperature || 0.3;
+    document.getElementById("temp-val").textContent = settings.temperature || 0.3;
+    document.getElementById("set-maxTokens").value = settings.maxTokens || 1024;
+    document.getElementById("brand-title").innerHTML = `${settings.botName} <span style="color:#64748B;font-weight:400">Admin</span>`;
+    renderColors();
+    updateEmbedCode();
+  }
+
+  document.getElementById("set-temperature").addEventListener("input", e => {
+    document.getElementById("temp-val").textContent = e.target.value;
+  });
+
+  async function saveSettings() {
+    const body = {
+      botName: document.getElementById("set-botName").value,
+      welcomeMessage: document.getElementById("set-welcomeMessage").value,
+      primaryColor: settings.primaryColor,
+      model: document.getElementById("set-model").value,
+      systemPrompt: document.getElementById("set-systemPrompt").value,
+      temperature: parseFloat(document.getElementById("set-temperature").value),
+      maxTokens: parseInt(document.getElementById("set-maxTokens").value),
+    };
+    await fetch(`${API}/api/admin/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    settings = { ...settings, ...body };
+    populateSettings();
+    showToast("Settings saved!");
+  }
+
+  // ═══ COLORS ═══
+  const COLORS = ["#0F6FFF","#8B5CF6","#10B981","#F59E0B","#EF4444","#EC4899","#06B6D4","#F97316"];
+  function renderColors() {
+    const grid = document.getElementById("color-grid");
+    grid.innerHTML = COLORS.map(c =>
+      `<button class="color-swatch ${settings.primaryColor === c ? 'active' : ''}" style="background:${c};color:${c}" onclick="pickColor('${c}')"></button>`
+    ).join("");
+  }
+  function pickColor(c) {
+    settings.primaryColor = c;
+    renderColors();
+  }
+
+  // ═══ DOCUMENTS ═══
+  function renderDocuments() {
+    const list = document.getElementById("doc-list");
+    if (!documents.length) {
+      list.innerHTML = `<div class="empty-state">No documents yet. Upload files to build your knowledge base.</div>`;
+      return;
+    }
+    list.innerHTML = documents.map(d => `
+      <div class="doc-row">
+        <span class="doc-name">📄 ${escHtml(d.name)}</span>
+        <span class="doc-meta">${d.size}</span>
+        <span class="doc-meta">${new Date(d.uploadedAt).toLocaleDateString()}</span>
+        <span class="badge">${d.chunkCount} chunks</span>
+        <button class="btn-delete" onclick="deleteDoc('${d.id}')">🗑️</button>
+      </div>
+    `).join("");
+  }
+
+  async function deleteDoc(id) {
+    if (!confirm("Remove this document from the knowledge base?")) return;
+    await fetch(`${API}/api/admin/documents/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    showToast("Document removed");
+    loadDocuments();
+  }
+
+  // ═══ UPLOAD ═══
+  const zone = document.getElementById("upload-zone");
+  const fileInput = document.getElementById("file-input");
+
+  zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("dragover"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+  zone.addEventListener("drop", e => { e.preventDefault(); zone.classList.remove("dragover"); uploadFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener("change", e => { if (e.target.files[0]) uploadFile(e.target.files[0]); fileInput.value = ""; });
+
+  async function uploadFile(file) {
+    if (!file) return;
+    const prog = document.getElementById("upload-progress");
+    prog.style.display = "block";
+    document.getElementById("upload-name").textContent = file.name;
+    document.getElementById("upload-pct").textContent = "Uploading...";
+    document.getElementById("upload-fill").style.width = "30%";
+
+    const form = new FormData();
+    form.append("file", file);
+
+    try {
+      document.getElementById("upload-fill").style.width = "60%";
+      const res = await fetch(`${API}/api/admin/documents`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      document.getElementById("upload-fill").style.width = "100%";
+      document.getElementById("upload-pct").textContent = "Done!";
+
+      if (res.ok) {
+        showToast(`"${file.name}" uploaded & indexed!`);
+        loadDocuments();
+      } else {
+        const err = await res.json();
+        showToast("Upload failed: " + (err.error || "Unknown error"));
+      }
+    } catch (err) {
+      showToast("Upload failed: " + err.message);
+    }
+
+    setTimeout(() => { prog.style.display = "none"; }, 2000);
+  }
+
+  // ═══ EMBED CODE ═══
+  function updateEmbedCode() {
+    const code = `<!-- ${settings.botName || 'AI'} Chatbot Widget -->\n<script src="${API}/widget.js" data-server="${API}"><\/script>`;
+    document.getElementById("embed-code").textContent = code;
+  }
+  function copyEmbed() {
+    navigator.clipboard?.writeText(document.getElementById("embed-code").textContent);
+    showToast("Embed code copied!");
+  }
+
+  // ═══ TABS ═══
+  function switchTab(btn) {
+    document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach(p => p.style.display = "none");
+    document.getElementById("tab-" + btn.dataset.tab).style.display = "block";
+  }
+
+  // ═══ UTILS ═══
+  function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function showToast(msg) {
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `<span style="color:var(--success)">✓</span> ${escHtml(msg)}`;
+    document.getElementById("toast-container").appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  // ═══ AUTO-LOGIN IF TOKEN EXISTS ═══
+  if (token) {
+    fetch(`${API}/api/admin/settings`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => {
+        if (r.ok) {
+          document.getElementById("login-screen").style.display = "none";
+          document.getElementById("app").style.display = "block";
+          loadData();
+        } else { doLogout(); }
+      }).catch(() => doLogout());
+  }
+</script>
+</body>
+</html>
