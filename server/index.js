@@ -18,7 +18,8 @@ const PORT = process.env.PORT || 3001;
 
 // ─── Config ───
 //const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+//const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "changeme123";
 const DATA_DIR = path.join(__dirname, "../data");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
@@ -307,7 +308,6 @@ app.post("/api/chat", async (req, res) => {
     const { message, history = [] } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
     if (!ANTHROPIC_API_KEY) {
-      console.log("API KEY exists:", !!process.env.ANTHROPIC_API_KEY);
       return res.status(500).json({
         error: "API key not configured. Set ANTHROPIC_API_KEY environment variable.",
       });
