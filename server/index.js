@@ -307,6 +307,7 @@ app.post("/api/chat", async (req, res) => {
     const { message, history = [] } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
     if (!ANTHROPIC_API_KEY) {
+      console.log("API KEY exists:", !!process.env.ANTHROPIC_API_KEY);
       return res.status(500).json({
         error: "API key not configured. Set ANTHROPIC_API_KEY environment variable.",
       });
