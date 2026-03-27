@@ -18,6 +18,7 @@ const PORT = process.env.PORT || 3001;
 
 // ─── Config ───
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "changeme123";
 const DATA_DIR = path.join(__dirname, "../data");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
